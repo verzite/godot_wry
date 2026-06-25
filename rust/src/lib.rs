@@ -115,6 +115,8 @@ impl IControl for WebView {
     }
 
     fn enter_tree(&mut self) {
+        // En el editor este virtual NO corre; el reparent se dispara desde el
+        // consumidor vía sync_to_window(). En runtime de juego sí corre y reparenta solo.
         if self.webview.is_some() {
             if let Some(gd_window) = self.base().get_window() {
                 let current_window_id = gd_window.get_window_id();
@@ -580,6 +582,21 @@ impl WebView {
             let data = serde_json::json!({ "detail": String::from(message) });
             let script = format!("document.dispatchEvent(new CustomEvent('message', {}))", data);
             let _ = webview.evaluate_script(&script);
+        }
+    }
+
+    /// Re-parenta el overlay nativo a la ventana ACTUAL del nodo si cambió.
+    /// Necesario en el editor: enter_tree (virtual) NO corre ahí, así que el
+    /// reparent automático nunca dispara. El consumidor (@tool) llama esto cuando
+    /// detecta que el dock pasó a otra Window (ej. al hacerlo flotante).
+    #[func]
+    fn sync_to_window(&mut self) {
+        if self.webview.is_none() { return; }
+        if let Some(w) = self.base().get_window() {
+            let cur = w.get_window_id();
+            if cur != self.window_id {
+                self.reparent_webview(cur);
+            }
         }
     }
 
