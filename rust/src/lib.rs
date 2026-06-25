@@ -600,6 +600,19 @@ impl WebView {
         }
     }
 
+    /// Re-parenta el overlay a una ventana ESPECÍFICA (por window_id), aunque no sea
+    /// la actual del nodo. Sirve para sacarlo de una Window que está por destruirse
+    /// (ej. al re-dockear una flotante) hacia la principal ANTES de que el HWND muera,
+    /// evitando que el overlay quede huérfano y haya que reconstruirlo (recarga).
+    #[func]
+    fn reparent_to(&mut self, window_id: i64) {
+        if self.webview.is_none() { return; }
+        let wid = window_id as i32;
+        if wid != self.window_id {
+            self.reparent_webview(wid);
+        }
+    }
+
     #[func]
     fn resize(&self) {
         if let Some(webview) = &self.webview {
